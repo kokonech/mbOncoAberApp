@@ -1,0 +1,2 @@
+Time	Time.lo	Time.up	SegNo	SegId
+1	0.752508829627858	1	1	2_3N_II

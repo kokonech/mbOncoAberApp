@@ -1,0 +1,2 @@
+Segment	Lachesis_min	Lachesis_max	Lachesis_mean	MutationTimer_min	MutationTimer_max	MutationTimer_mean	Cor_coeff
+chr_17_trisomic_II	0.41677338168304	2.56560960947975	1.17188518786145	0.281127195073566	0.92384593450042	0.675017871797939	NA

@@ -1,0 +1,2 @@
+Mean	Min	Max	Segment	Timing	Time
+0	0	0.133126818973221	16-2N-II	Pre-CNV	MRCA

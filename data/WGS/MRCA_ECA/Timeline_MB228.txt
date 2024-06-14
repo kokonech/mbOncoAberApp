@@ -1,0 +1,2 @@
+Mean	Min	Max	Segment	Timing	Time
+0	0	0.199350528051029	17-4N-IV	Pre-CNV	MRCA

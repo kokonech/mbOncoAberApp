@@ -1,0 +1,6 @@
+Sample	Signature	Fraction of SNVs	Type
+167904	SBS3	0	All
+167904	SBS8	0	All
+167904	SBS10a	0	All
+167904	SBS10b	0	All
+167904	Clock	1	All
