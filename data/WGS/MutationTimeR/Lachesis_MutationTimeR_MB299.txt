@@ -1,2 +1,2 @@
 Segment	Lachesis_min	Lachesis_max	Lachesis_mean	MutationTimer_min	MutationTimer_max	MutationTimer_mean	Cor_coeff
-chr_10_disomic_II	0	11.4728907897356	0	0	0.888050421223973	0.389906136787376	NA
+chr_10_disomic_II	0	11.4728907897356	0	9.09154096004849e-42	0.840669122338484	0.389906136787376	NA
