@@ -230,19 +230,29 @@ ui <- fluidPage(
        tabPanel("Single nuclei RNA/ATAC",
              fluidRow(
                  column(width = 5,
-                     selectInput("inputScData", "Sample:",
-                                 choices=rownames(snRnaSeqAnn),selected = curId),
-                     selectInput("data_type", "Data type:", choices =NULL),
-                     h5(htmlOutput("snTumGroup")),
-                     h5(htmlOutput("snTumSubgroup")),
-                     h5(textOutput("status")),
-                     h5(textOutput("age")),
-                     h5(textOutput("gender")),
-                     h5(uiOutput("somatic")),
-                     h5(uiOutput("subclones")),
-                     selectInput("selGroup","UMAP annotation:",
-                                 rnaAnnTypes,selected = "Subclone")
-                     ), 
+                      fluidRow (
+                        column( 6,
+                           selectInput("inputScData", "Sample:",
+                                       choices=rownames(snRnaSeqAnn),selected = curId),
+                           selectInput("data_type", "Data type:", choices =NULL),
+                           h5(htmlOutput("snTumGroup")),
+                           h5(htmlOutput("snTumSubgroup")),
+                           h5(textOutput("status")),
+                           h5(textOutput("age")),
+                           h5(textOutput("gender")),
+                           h5(uiOutput("somatic")),
+                           h5(uiOutput("subclones")),
+                           selectInput("selGroup","UMAP annotation:",
+                                       rnaAnnTypes,selected = "Subclone")
+                     ),
+                        column( 3,
+                                h5("Phylogeny:"),
+                                tags$div(
+                                  uiOutput("image_cnv_tree",align = "center")
+                                )
+                        )
+                     )
+                  ), 
                  column(width = 7,
                         div(
                           h4("CNV bulk (methylation)", align = "left"),
@@ -524,6 +534,21 @@ server <- function(input, output,session) {
     # Return the generated img tag
     img_tag
   })
+  
+  output$image_cnv_tree <- renderUI({
+    selected_id <- getScTum()
+    
+    image_src <- paste0("cnvTree/",selected_id,"_tree.png?version=0")
+    if (!is.null(image_src)) {
+      img_tag <- tags$img(src = image_src, width = "170px")
+    } else {
+      img_tag <- tags$p("No image selected.")
+    }
+    
+    # Return the generated img tag
+    img_tag
+  })
+  
   
   output$image_cnv_snRNA <- renderUI({
     selected_id <- getScTum()
