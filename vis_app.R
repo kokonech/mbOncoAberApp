@@ -79,6 +79,9 @@ cbp1 <- rev(c("#999999", "#E69F00", "#56B4E9", "#009E73",
 
 sig.colors <- c(SBS1 = "#FF0000", SBS3 = "#00A08A", SBS5 = "#F2AD00",
                 SBS8 = "#F98400", SBS10a = "#5BBCD6", SBS10b = "#ECCBAE", Clock = "#046C9A")
+
+time.shapes <- c("< ECA" = 0, "ECA" = 15, "> ECA, < MRCA" = 4, "MRCA" = 16, "> MRCA" = 1)
+  
 # whole genome sequencing cohort annotation
 wgsAnn <- read.delim("data/WGS_sample_information.txt")
 rownames(wgsAnn) <- wgsAnn$MRCA_ID
@@ -279,7 +282,8 @@ ui <- fluidPage(
                          div(
                            h5("Copy number profile", align = "left"),
                            tags$div (
-                             plotOutput("cnvplot", height = "300px")
+                            # plotOutput("cnvplot", height = "300px")
+                             uiOutput("image_cnvplot", height = "300px")
                            )
                          )
                   )
@@ -650,6 +654,20 @@ server <- function(input, output,session) {
     print(cnvsegments + theme(text = element_text(size = 12)))
   })
   
+  output$image_cnvplot <- renderUI({
+    selected_id <-  getWGSTum()
+    
+    image_src <- paste0("WGScnv/CNV_plot_",selected_id,".png")
+    if (!is.null(image_src)) {
+      img_tag <- tags$img(src = image_src, width = "550px")
+    } else {
+      img_tag <- tags$p("No image selected.")
+    }
+    
+    # Return the generated img tag
+    img_tag
+  })
+  
   output$mutsigplot <- renderPlot({
     tId <- getWGSTum()
     p <- ggplot(sigs, aes(x=Type, y=Fraction.of.SNVs, fill=Signature)) + geom_col() + scale_fill_manual(values=sig.colors) +
@@ -706,28 +724,34 @@ server <- function(input, output,session) {
     mrca <- MRCAdensities[MRCAdensities$Sample==tId,]
     eca <- ECAdensities[ECAdensities$Sample==tId,]
     timeline$Segment <- factor(timeline$Segment, levels = timeline$Segment)
+    timeline$Time <- factor(timeline$Time, levels = c("< ECA", "ECA", "> ECA, < MRCA", "ECA/MRCA", "MRCA", "> MRCA"))
     p <- ggplot(timeline, aes(x=Mean, xmin=Min, xmax=Max, y=as.numeric(as.factor(Segment)) - 
-                                0.5, col = Segment)) +
-      geom_point(aes(shape=Time), size = 3) + geom_errorbarh(height=0, size = 1)+ 
+                                0.5, col = Segment)) + scale_shape_manual(values = time.shapes, drop = F) +
+      geom_point(aes(shape=Time), size = 3, show.legend = T) + geom_errorbarh(height=0, size = 1)+ 
       geom_vline(data=data.frame(x=mrca["Mean"]), aes(xintercept=Mean/3.3/10^3),  col=time.colors["MRCA"],
                  linetype=2, size = 1) + 
+      annotate(geom = "text", label = "MRCA \n(mean; 95% CI)", x = unlist(mrca["Max"]/3.3/10^3), hjust = 0, 
+               y = nrow(timeline)+1, col=time.colors["MRCA"]) +
       geom_ribbon(data=data.frame(xmin=rep(unlist(mrca["Min"]),2),
                                   xmax=rep(unlist(mrca["Max"]),2),
-                                  y=c(0, max(1,nrow(timeline)))), 
+                                  y=c(-2, 2+max(1,nrow(timeline)))), 
                   aes(xmin=xmin/3.3/10^3, xmax=xmax/3.3/10^3,y=y),
                   inherit.aes = F, fill=time.colors["MRCA"], col=NA, alpha=0.5) +
       geom_vline(data=data.frame(x=eca["Mean"]), aes(xintercept=Mean/3.3/10^3), col=time.colors["ECA"],
                  linetype=2, size = 1) + 
       geom_ribbon(data=data.frame(xmin=rep(unlist(eca["Min"]), 2),
                                   xmax=rep(unlist(eca["Max"]),2),
-                                  y=c(0, nrow(timeline))), 
+                                  y=c(-2, 2+nrow(timeline))), 
                   aes( xmin=xmin/3.3/10^3, xmax=xmax/3.3/10^3, y=y),
                   inherit.aes = F, fill=time.colors["ECA"], col=NA, alpha=0.5) +
-      scale_x_continuous(name="Mutations per Mb", limits =  c(-0.05*(max(mutdens$Mean)), max(mutdens$Max)*1.1)) +
-      scale_y_continuous(limits=c(0, max(1,nrow(timeline)))) + 
+      annotate(geom = "text", label = "ECA \n(mean; 95% CI)", x = unlist(eca["Max"]/3.3/10^3), hjust = 0, 
+               y = -1, col=time.colors["ECA"]) +
+      scale_x_continuous(name="SNVs per Mb", limits =  c(-0.05*(max(mutdens$Mean)), max(mutdens$Max)*1.1)) +
+      scale_y_continuous(limits=c(-2, 2+max(1,nrow(timeline)))) + 
       theme(axis.line.y=element_blank(), axis.text.y=element_blank(),
             axis.ticks.y=element_blank(), axis.title.y=element_blank()) +
-      guides(col=guide_legend(ncol=2))
+      guides(col=guide_legend(ncol=2, title = "Genomic segment \n(chromosome - copy number - \nmajor allele count)"),
+             shape = guide_legend(title = "Time of copy \nnumber change"))
     
     print(p)
   })
@@ -740,7 +764,11 @@ server <- function(input, output,session) {
                                                         axis.ticks.y = element_blank(), axis.text.y = element_blank()) +
       geom_vline(xintercept = 1, col = time.colors["MRCA"], linetype = 2, size = 1.5) + 
       scale_x_continuous(name = "Mutation time relative to MRCA", limits = c(0, 2)) +
-      guides(col=guide_legend(ncol=2))
+      scale_y_continuous(limits = c(-2, nrow(muttimerevo) +2)) +
+      guides(col=guide_legend(ncol=2))+
+      annotate(geom = "text", label = "MRCA \n(mean; 95% CI)", x = 1.1, hjust = 0, 
+               y = nrow(muttimerevo)+1, col=time.colors["MRCA"]) +
+      guides(col=guide_legend(ncol=2, title = "Genomic segment \n(chromosome - copy number - \nmajor allele count)"))
   })
   
   output$neutralevolplot <- renderPlot({
@@ -779,6 +807,21 @@ server <- function(input, output,session) {
                                                axis.text = element_text(size=11, color="black"),
             line = element_line(size = 1.2))
   })
+  
+  output$image_mobsterplot <- renderUI({
+    selected_id <-  getWGSTum()
+    
+    image_src <- paste0("mobster/Mobster_",selected_id,".png")
+    if (!is.null(image_src)) {
+      img_tag <- tags$img(src = image_src, width = "250px")
+    } else {
+      img_tag <- tags$p("No image selected.")
+    }
+    
+    # Return the generated img tag
+    img_tag
+  })
+  
   
   output$MutDensPlots <- renderUI( if(input$MutDens == "this paper"){
     fluidRow(
@@ -847,7 +890,8 @@ server <- function(input, output,session) {
              div(
                h5("Mobster fit", align = "left"),
                tags$div (
-                 plotOutput("mobsterplot", height = "250px")
+                # plotOutput("mobsterplot", height = "250px")
+                 uiOutput("image_mobsterplot", height = "250px")
                )
              )
       ),
