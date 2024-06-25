@@ -540,7 +540,7 @@ server <- function(input, output,session) {
     
     image_src <- paste0("cnvTree/",selected_id,"_tree.png?version=0")
     if (!is.null(image_src)) {
-      img_tag <- tags$img(src = image_src, width = "170px")
+      img_tag <- tags$img(src = image_src, width = "180px")
     } else {
       img_tag <- tags$p("No image selected.")
     }
