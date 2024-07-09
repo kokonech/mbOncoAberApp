@@ -504,12 +504,14 @@ server <- function(input, output,session) {
     tId <- getScTum()
     dataType <- getDataType()
     if (dataType == "snRNA-seq") {
-      combProps <- summary(as.factor(dmRes$Subclone)) *100 / nrow(dmRes)
+      tRes <- dmRes[dmRes$Subclone != "Normal",]
     } else {
-      combProps <- summary(as.factor(atacRes$Subclone)) *100 / nrow(atacRes)
+      tRes <- atacRes[ atacRes$Subclone != "Normal",]
     }
+    combProps <- summary(as.factor(tRes$Subclone)) *100 / nrow(tRes)
+    
     subcloneInfo <- c()
-    for (i in 1:(length(combProps)-1)) {
+    for (i in 1:(length(combProps))) {
         targProps = combProps[i]
         sc <- names(targProps)
         cType <- subcloneRna[tId,sc]
