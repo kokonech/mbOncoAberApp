@@ -35,7 +35,7 @@ subcloneRna$Sample <- NULL
 
 print("Load snRNA-seq UMAP results...")
 snRnaSeqInput <- list()
-rnaInput <- list.files("data/snRNAseq")
+rnaInput <- list.files("data/snRNAseq/",pattern = "rds")
 for(fName in rnaInput ) {
     print(fName)
     sId = str_split(fName, "\\.")[[1]][1]
@@ -51,14 +51,6 @@ for(fName in atacInput ) {
   sId = str_split(fName, "\\.")[[1]][1]
   snAtacSeqInput[[sId]] = paste0("data/snATACseq/",fName)
 }
-
-
-# RNAseq UMAP annotation
-rnaAnnTypes <- c("Subclone","Group34_A","Group34_B","Group34_C",
-              "MYC","MYCN","SNCAIP","PRDM6")
-# atacSeqseq UMAP annotation
-atacAnnTypes <- c("Subclone","MYC","MYCN","SNCAIP","PRDM6")
-
 
 # WGS TUMOR DATA #################################
 
@@ -184,9 +176,14 @@ for(fName in wgsInput ) {
 
 curId <- "MB272"
 print(snRnaSeqInput[[curId]])
-dmRes <- read.delim(snRnaSeqInput[[curId]])
+dmRes <- readRDS(snRnaSeqInput[[curId]])
 print(colnames(dmRes))
+# rnaSeq  UMAP annotation
+rnaAnnTypes <- colnames(dmRes)[3:ncol(dmRes)]
 atacRes <- read.delim(snAtacSeqInput[[curId]])
+# atacSeq UMAP annotation : fixed
+atacAnnTypes <- c("Subclone","MYC","MYCN","SNCAIP","PRDM6")
+
 print("Loaded default info")
 
 ######### COOKIES CONTROL #################
@@ -439,7 +436,7 @@ server <- function(input, output,session) {
   getScTum <- eventReactive(input$inputScData, {
       #print("Update!")
       curId <<- input$inputScData
-      dmRes <<- read.delim(snRnaSeqInput[[curId]])
+      dmRes <<- readRDS(snRnaSeqInput[[curId]])
       print(paste("Change dataset to",curId))
       #if (!is.null(selected_sample) && selected_sample %in% names(sample_data)) {
       dataTypes = c("snRNA-seq")
