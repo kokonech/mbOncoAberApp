@@ -342,9 +342,10 @@ ui <- fluidPage(
                          p("UMAP interactive plot has specific vizualization options"),
                          tags$ul(
                               tags$li("Subclone annotation across cells (same colors are used to mark subclones in single cell CNV profile)"), 
-                              tags$li("Only in snRNA-seq: enrichment of medulloblastoma group 3/4 proliferation (G34_A), progenitor-like (G34_B) and differentation (G34_C) signals"), 
-                              tags$li("Gene expression (snRNA-seq) and gene body signal enrichment (snATAC-seq) for main targets")
-    
+                              tags$li("Gene expression (snRNA-seq) and gene body signal enrichment (snATAC-seq) for main targets"),
+                              tags$li("Only in snRNA-seq: enrichment of medulloblastoma group 3/4 proliferation (G34_A), 
+                                      progenitor-like (G34_B) and differentation (G34_C) signals as well as expression of subclone-specific genes")
+                          
                           ),
                          p(""),
                          h4("Whole genome sequencing"),
@@ -437,6 +438,7 @@ server <- function(input, output,session) {
       #print("Update!")
       curId <<- input$inputScData
       dmRes <<- readRDS(snRnaSeqInput[[curId]])
+      rnaAnnTypes <<- colnames(dmRes)[3:ncol(dmRes)]
       print(paste("Change dataset to",curId))
       #if (!is.null(selected_sample) && selected_sample %in% names(sample_data)) {
       dataTypes = c("snRNA-seq")
@@ -446,7 +448,7 @@ server <- function(input, output,session) {
           dataTypes  <- c(dataTypes,"snATAC-seq")
       } 
       updateSelectInput(session, "data_type", choices = dataTypes)
-      
+      updateSelectInput(session, "selGroup", choices = rnaAnnTypes,selected = "Subclone")
       curId
   })
   
