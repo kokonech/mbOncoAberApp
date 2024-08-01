@@ -3,6 +3,7 @@ library(shinyjs)
 library(shinythemes)
 library(plotly)
 library(stringr)
+library(shinyscreenshot)
 library(ggplot2);  theme_set(theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), text=element_text(size=11, color="black"),
                                    panel.background = element_blank(), axis.line = element_line(colour = "black", size=0.75),
                                    axis.ticks = element_line(color = "black", size=0.75),
@@ -72,7 +73,7 @@ cbp1 <- rev(c("#999999", "#E69F00", "#56B4E9", "#009E73",
 sig.colors <- c(SBS1 = "#FF0000", SBS3 = "#00A08A", SBS5 = "#F2AD00",
                 SBS8 = "#F98400", SBS10a = "#5BBCD6", SBS10b = "#ECCBAE", Clock = "#046C9A")
 
-time.shapes <- c("< ECA" = 0, "ECA" = 15, "> ECA, < MRCA" = 4, "MRCA" = 16, "> MRCA" = 1)
+time.shapes <- c("< ECA" = 0, "ECA" = 15, "ECA/MRCA" = 4, "MRCA" = 16, "> MRCA" = 1)
   
 # whole genome sequencing cohort annotation
 wgsAnn <- read.delim("data/WGS_sample_information.txt")
@@ -223,6 +224,7 @@ ui <- fluidPage(
   #useShinyjs(),
   #extendShinyjs(text = jsCode,functions=c("getcookie","setcookie","rmcookie")),
   theme=shinytheme("spacelab"),
+  actionButton("go", "Take a screenshot"),
   navbarPage(title = "MB G34 onco aberrations",
        tabPanel("Single nuclei RNA/ATAC",
              fluidRow(
@@ -432,6 +434,10 @@ server <- function(input, output,session) {
   #   stopApp()
   # })
  
+  observeEvent(input$go, {
+    screenshot()
+  })
+  
   ### SINGLE CELL FOCUS
   
   getScTum <- eventReactive(input$inputScData, {
@@ -569,9 +575,7 @@ server <- function(input, output,session) {
     img_tag
   })
   
- 
-  
-    
+
   output$dimplot <- renderPlotly({
       tId <- getScTum()
       selGrp <- getAnnGroup()
@@ -609,6 +613,8 @@ server <- function(input, output,session) {
     curId <<- input$inputWGSData
     if (curId %in% names(WGSMutTimeR)){
       updateRadioButtons(session, "MutDens", choices = c("this paper", "MutationTimeR"))
+    }else{
+      updateRadioButtons(session, "MutDens", choices = "this paper")
     } 
   })
   
@@ -635,7 +641,10 @@ server <- function(input, output,session) {
       muttimer <<- read.delim(WGSMutTimeR[[curId]]) 
       muttimerevo <<- read.delim(WGSEvoMutTimeR[[curId]])
       updateRadioButtons(session, "MutDens", choices = c("this paper", "MutationTimeR"))
-    } 
+    } else{
+      updateRadioButtons(session, "MutDens", choices = "this paper")
+
+    }
     cns <- sort(as.numeric(unique(vaf$CN)))
     sel.cn <- ifelse(2 %in% cns, 2, cns[1])
     updateSelectInput(session, "selCN", choices = cns,selected = sel.cn)
@@ -698,7 +707,7 @@ server <- function(input, output,session) {
     tId <- getWGSTum()
     p <- ggplot(sigs, aes(x=Type, y=Fraction.of.SNVs, fill=Signature)) + geom_col() + scale_fill_manual(values=sig.colors) +
       scale_x_discrete(name="") + scale_y_continuous("Fraction of SNVs") + coord_polar("y", start = 0) +
-      theme_void() + theme(legend.position = "bottom")
+      theme_void() + theme(legend.position = "bottom") + guides(fill = guide_legend(nrow = 2))
     print(p)
   })
   
@@ -752,7 +761,8 @@ server <- function(input, output,session) {
     timeline$Segment <- factor(timeline$Segment, levels = timeline$Segment)
     timeline$Time <- factor(timeline$Time, levels = c("< ECA", "ECA", "> ECA, < MRCA", "ECA/MRCA", "MRCA", "> MRCA"))
     p <- ggplot(timeline, aes(x=Mean, xmin=Min, xmax=Max, y=as.numeric(as.factor(Segment)) - 
-                                0.5, col = Segment)) + scale_shape_manual(values = time.shapes, drop = F) +
+                                0.5, col = Segment)) + 
+      scale_shape_manual(values = time.shapes, labels = c("<ECA", "ECA", ">ECA, <MRCA", "MRCA",  ">MRCA"), drop = F) +
       geom_point(aes(shape=Time), size = 3, show.legend = T) + geom_errorbarh(height=0, size = 1)+ 
       geom_vline(data=data.frame(x=mrca["Mean"]), aes(xintercept=Mean/3.3/10^3),  col=time.colors["MRCA"],
                  linetype=2, size = 1) + 
@@ -775,9 +785,10 @@ server <- function(input, output,session) {
       scale_x_continuous(name="SNVs per Mb", limits =  c(-0.05*(max(mutdens$Mean)), max(mutdens$Max)*1.1)) +
       scale_y_continuous(limits=c(-2, 2+max(1,nrow(timeline)))) + 
       theme(axis.line.y=element_blank(), axis.text.y=element_blank(),
-            axis.ticks.y=element_blank(), axis.title.y=element_blank()) +
-      guides(col=guide_legend(ncol=2, title = "Genomic segment \n(chromosome - copy number - \nmajor allele count)"),
-             shape = guide_legend(title = "Time of copy \nnumber change"))
+            axis.ticks.y=element_blank(), axis.title.y=element_blank(),
+            legend.text = element_text(size = 8), legend.title = element_text(size = 9)) +
+      guides(col=guide_legend(ncol=2, title = "Genomic segment \n(chromosome - copy number - \nmajor allele count)" ),
+             shape = guide_legend(ncol = 3, title = "Time of copy \nnumber change", position = "bottom"))
     
     print(p)
   })
@@ -792,7 +803,7 @@ server <- function(input, output,session) {
       scale_x_continuous(name = "Mutation time relative to MRCA", limits = c(0, 2)) +
       scale_y_continuous(limits = c(-2, nrow(muttimerevo) +2)) +
       guides(col=guide_legend(ncol=2))+
-      annotate(geom = "text", label = "MRCA \n(mean; 95% CI)", x = 1.1, hjust = 0, 
+      annotate(geom = "text", label = "MRCA \n(mean)", x = 1.1, hjust = 0, 
                y = nrow(muttimerevo)+1, col=time.colors["MRCA"]) +
       guides(col=guide_legend(ncol=2, title = "Genomic segment \n(chromosome - copy number - \nmajor allele count)"))
   })
@@ -855,7 +866,7 @@ server <- function(input, output,session) {
              div(
                h5("Densities of non-amplified SNVs", align = "left"),
                tags$div (
-                 plotOutput("nonampdensplot", height = "250px")
+                 plotOutput("nonampdensplot", height = "280px")
                  
                )
              )
@@ -864,7 +875,7 @@ server <- function(input, output,session) {
              div(
                h5("Densities of amplified SNVs", align = "left"),
                tags$div (
-                 plotOutput("ampdensplot", height = "250px")
+                 plotOutput("ampdensplot", height = "280px")
                )
              ),
       ),
@@ -872,7 +883,7 @@ server <- function(input, output,session) {
              div(
                h5("Evolutionary timeline", align = "left"),
                tags$div (
-                 plotOutput("timelineplot", height = "250px")
+                 plotOutput("timelineplot", height = "380px")
                )
              )
       )
